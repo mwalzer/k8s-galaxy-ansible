@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+    name: {{.Values.galaxy_metadata_name}} 
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+         app: {{.Values.galaxy_label_app}} 
+    spec:
+      containers:
+      - name: galaxy-k8s
+        image: {{.Values.galaxy_image_registry}}{{.Values.galaxy_image}}{{.Values.galaxy_image_tag}}
+        imagePullPolicy: {{.Values.galaxy_pull_policy}}
+        command: ["/bin/bash"]
+        args: ["-c", "if [ -e /opt/galaxy_dev/config/galaxy.ini]; then cp /opt/galaxy_dev/config/galaxy.ini /galaxy/config/galaxy.ini; fi && if [ -e /opt/galaxy_dev/config/job_conf.xml]; then cp /opt/galaxy_dev/config/job_conf.xml /galaxy/config/job_conf.xml; fi && if [ -e /opt/galaxy_dev/config/tool_conf.xml]; then cp /opt/galaxy_dev/config/tool_conf.xml /galaxy/config/tool_conf.xml; fi && if [ -d /opt/galaxy_dev/tools]; then cp -r /opt/galaxy_dev/tools /galaxy/tools; fi && mkdir -p /opt/galaxy_data/database-sqlite && ./run.sh --daemon && tail -f paster.log"]
+        lifecycle: 
+          preStop:
+            exec:
+               command:
+                   - "./run.sh"
+                   - "--stop" 
+        ports:
+          - containerPort: {{.Values.galaxy_internal_port}} 
+        volumeMounts:
+          - mountPath: "/opt/galaxy_data"
+            name: galaxy-pvc
+### mutually exclusive to development_folder
+{{ if .Values.cluster_dev }}
+          #- mountPath: "/galaxy/config"
+          - mountPath: "/opt/galaxy_dev"
+            name: galaxy-dev-config
+          #- mountPath: "/galaxy/tools/phenomenal"
+          #  name: phenomenal-tools
+{{ end }}
+### also assumed is that both (galaxy-pvc and galaxy-dev) claims have been established beforehand and galaxy_create_pvc=false was used
+
+{{ if .Values.development_folder }}
+          - mountPath: "/galaxy/config/galaxy.ini"
+            name: galaxy-ini 
+          - mountPath: "/galaxy/config/job_conf.xml"
+            name: galaxy-job-conf 
+          - mountPath: "/galaxy/config/tool_conf.xml"
+            name: galaxy-tool-conf
+          - mountPath: "/galaxy/tools/phenomenal"
+            name: phenomenal-tools           
+{{ end }}
+      volumes:
+        - name: galaxy-pvc
+          persistentVolumeClaim:
+              claimName: {{.Values.galaxy_pvc}}
+{{ if .Values.cluster_dev }}
+        - name: galaxy-dev-config
+          persistentVolumeClaim:
+              claimName: {{.Values.galaxy_dev_config}}
+{{ end }}
+{{ if .Values.development_folder }}
+        - name: galaxy-ini
+          hostPath:
+            path: {{ .Values.development_folder }}/config/galaxy.ini
+        - name: galaxy-job-conf
+          hostPath:
+            path: {{ .Values.development_folder }}/config/job_conf.xml
+        - name: galaxy-tool-conf
+          hostPath:
+            path: {{ .Values.development_folder }}/config/tool_conf.xml
+        - name: phenomenal-tools
+          hostPath:
+            path: {{ .Values.development_folder }}/tools/phenomenal
+        - name: galaxy-pvc
+          persistentVolumeClaim:
+              claimName: {{.Values.galaxy_pvc}}
+{{ end }}

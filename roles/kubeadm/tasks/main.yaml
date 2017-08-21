@@ -1,0 +1,66 @@
+- name: SELinux - set permissive mode
+  command: setenforce 0
+  ignore_errors: yes
+
+#- name: Install k8s APT repo GPG key
+#  apt_key:
+#    url: 'https://packages.cloud.google.com/apt/doc/apt-key.gpg'
+#    state: present
+
+- name: Adding k8s repository
+  yum_repository:
+    name: Kubernetes
+    description: Kubernetes repo
+    file: kubernetes
+    baseurl: http://yum.kubernetes.io/repos/kubernetes-el7-x86_64
+    enabled: yes
+    gpgcheck: no
+    #state: present
+  register: kuberepo
+
+- name: Install docker and kubernetes packages
+  yum:
+    name: "{{item}}"
+    state: installed
+    update_cache: yes
+  with_items:
+    - docker
+    - kubelet
+    - kubeadm
+    - kubectl
+    - kubernetes-cni
+
+- name: Start docker service
+  systemd: 
+    state: started 
+    name: docker 
+    enabled: yes
+
+- name: Start kubelet service
+  systemd: 
+    state: started 
+    name: kubelet
+    enabled: yes
+
+- name: add hosts
+  lineinfile:
+    dest: "/etc/hosts"
+    regexp: ".*{{ hostvars[item].ansible_hostname }}$"
+    line: "{{ hostvars[item].ansible_default_ipv4.address }} {{ hostvars[item].ansible_hostname }}"
+    state: present
+  when: hostvars[item].ansible_hostname is defined
+  with_items: "{{groups['all'] | default([])}}"
+
+- name: Create OpenStack cloud configuration
+  template:
+    src: files/cloud-config.j2
+    dest: /etc/kubernetes/cloud-config
+    mode: 0600
+
+- name: Override default kubeadm configuration to use the OpenStack cloud configuration
+  copy:
+    src: files/10-kubeadm.conf
+    dest: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+    mode: 0600
+  notify:
+    - Restart kubelet

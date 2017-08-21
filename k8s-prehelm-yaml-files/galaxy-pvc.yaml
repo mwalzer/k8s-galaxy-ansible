@@ -1,0 +1,12 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: galaxy-pvc
+spec:
+  storageClassName: manual
+  volumeName: k8s-galaxy-data-volume
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 3Gi

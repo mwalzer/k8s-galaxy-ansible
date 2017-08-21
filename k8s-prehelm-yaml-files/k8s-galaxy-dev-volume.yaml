@@ -1,0 +1,17 @@
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: k8s-galaxy-dev-volume
+  #labels:
+  #  type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+#  hostPath:
+#    path: "/home/centos/phnmnl-dev"
+  nfs:
+    server: k8s-master  # how the hell should I know the weave IP in a generic setting?
+    path: "/home/centos/phnmnl-dev/config"

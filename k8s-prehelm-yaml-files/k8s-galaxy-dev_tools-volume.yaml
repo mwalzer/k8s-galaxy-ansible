@@ -1,0 +1,17 @@
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: k8s-galaxy-dev.tools-volume
+  labels:
+    type: nfs-on-master
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+#  hostPath:
+#    path: "/home/centos/phnmnl-dev"
+  nfs:
+    server: k8s-master  # TODO in a matude cluster dev env this should probably a dedicated nfs container/pod?
+    path: "/home/centos/phnmnl-dev/tools"  # this of course needs to be the nfs mount (as used from client side) 

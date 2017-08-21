@@ -1,0 +1,12 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: galaxy-dev-config
+spec:
+  storageClassName: manual
+  volumeName: k8s-galaxy-dev.config-volume
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi

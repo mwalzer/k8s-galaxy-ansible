@@ -1,0 +1,84 @@
+- name: kubectl apply weave
+  command: kubectl apply -f https://git.io/weave-kube-1.6
+
+- name: kubectl apply dashboard
+  command: kubectl apply -f https://rawgit.com/kubernetes/dashboard/master/src/deploy/kubernetes-dashboard.yaml
+
+- name: copy manifests
+  copy:
+    src: "{{ role_path }}/files/manifests/"
+    dest: "/home/centos/manifests/" # TODO this is hardcoding to image use
+
+- name: kubectl apply nginx-ingress-controller
+  command: kubectl apply -f /home/centos/manifests/nginx-ingress-controller.yaml # TODO this is hardcoding to image use
+
+
+#- name: deploying helm tool
+#  shell: curl -L http://storage.googleapis.com/kubernetes-helm/helm-{{ helm_version | default('v2.1.0', true) }}-linux-amd64.tar.gz | tar zxv --strip 1 -C /tmp; chmod +x /tmp/helm; mv /tmp/helm /usr/local/bin/helm
+#  #when: kube_addons_enabled and "{{kube_addons.kube_helm is defined}}"
+#  ignore_errors: true
+
+#- name: initializing helm deployment
+#  command: /usr/local/bin/helm init
+#  #when: kube_addons_enabled and "{{kube_addons.kube_helm is defined}}"
+#  ignore_errors: true
+
+
+#N.B. This needs probably to be done _after_ adding nodes to the cluster! (bcs of init)
+- name: Acquire helm
+  unarchive:
+    src: http://storage.googleapis.com/kubernetes-helm/helm-{{ helm_version | default('v2.1.0', true) }}-linux-amd64.tar.gz
+    dest: /tmp/
+    mode: u+rwx,g+rx,o+rx
+    exclude:
+    - linux-amd64/LICENSE
+    - linux-amd64/README.md
+    remote_src: yes
+  become: true
+
+- name: install helm
+  copy: 
+    remote_src: true 
+    src: /tmp/linux-amd64/helm 
+    dest: /usr/local/bin/helm
+    mode: u+rwx,g+rx,o+rx
+    owner: root
+    group: root
+  become: true
+
+- name: deploying helm (+init +add_repo)
+  command: "{{ item }}"
+  with_items:
+  #- tar -xzf /tmp/helm-linux-amd64.tar.gz -C /usr/local/bin/
+  #- chmod ug+x /usr/local/bin/helm 
+  #- mv /tmp/helm /usr/local/bin/helm
+  - helm init
+  - helm repo add galaxy-helm-repo https://pcm32.github.io/galaxy-helm-charts
+  # TODO wait for tiller to start!!!
+  - kubectl create serviceaccount --namespace kube-system tiller
+  - kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+  - kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'
+  #https://github.com/kubernetes/helm/issues/2224
+  #https://stackoverflow.com/questions/43499971/helm-error-no-available-release-name-found
+  ignore_errors: true
+
+# copy the development files for to k8s master (0644)
+#- copy:
+#    src: /home/walzer/cloud-stuff/phnmnl-dev.tar.gz
+#    dest: /tmp/
+#    owner: centos
+#    group: centos
+#    mode: u=rw,g=r,o=r
+
+- name: Prepare custom k8s galaxy
+  unarchive:
+    src: /home/walzer/cloud-stuff/phnmnl-dev.tar.gz
+    dest: /home/centos
+    exclude:
+    - /phnmnl-dev/kargo/
+
+- name: deploy k8s galaxy
+  command: "{{ item }}"
+  with_items:
+  - helm install --set development_folder=/home/centos/phnmnl-dev galaxy-helm-repo/galaxy
+  ignore_errors: false 

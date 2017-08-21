@@ -1,0 +1,4 @@
+apiVersion: v1
+description: Simple Galaxy deployment (elixir dev release)
+name: galaxy-simple
+version: 0.2.0

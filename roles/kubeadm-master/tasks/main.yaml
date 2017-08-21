@@ -1,0 +1,63 @@
+- name: Check for existing kubelet configuration
+  stat:
+    path: /etc/kubernetes/kubelet.conf
+  register: kubelet_conf
+
+- name: kubeadm token generate
+  command: kubeadm token generate
+  register: token1
+  when: kubelet_conf.stat.exists == False
+
+- name: kubeadm get existing token
+  command: sh -c "kubeadm token list | awk '/The default bootstrap token/ { print $1; }'"
+  register: token2
+  when: kubelet_conf.stat.exists == True
+
+# https://github.com/ansible/ansible/issues/4297
+- name: token
+  set_fact:
+    token: "{{ token1 if kubelet_conf.stat.exists == False else token2 }}"
+
+- name: kubeadm init
+  command: "kubeadm init --skip-preflight-checks --token {{ token.stdout }} --kubernetes-version v1.7.0 --apiserver-advertise-address {{ hostvars[groups.master[0]].ansible_ssh_host }}"
+  args:
+    creates: /etc/kubernetes/kubelet.conf
+
+- name: Configure kube-controller-manager cloud provider integration
+  blockinfile:
+    dest: /etc/kubernetes/manifests/kube-controller-manager.yaml
+    insertbefore: 'image: '
+    block: "    - --cloud-provider=openstack\n    - --cloud-config=/etc/kubernetes/cloud-config"
+
+- name: Ensure kubectl configuration directory is present
+  become: True
+  file:
+    path: /home/centos/.kube
+    state: directory
+    owner: centos
+    group: centos
+    mode: 0700
+
+- name: Copy kubectl configuration for the default user
+  become: True
+  copy:
+    remote_src: True
+    src: /etc/kubernetes/admin.conf
+    dest: /home/centos/.kube/config
+    owner: centos
+    group: centos
+    mode: 0600
+
+- name: Check for existing kubectl bash completion
+  stat:
+    path: /etc/bash_completion.d/kubectl
+  register: kubectl_bash_completion
+
+- name: Ensure kubectl bash_completion is present
+  become: True
+  shell: kubectl completion bash > /etc/bash_completion.d/kubectl
+  when: kubectl_bash_completion.stat.exists == False
+
+#obsolete with kubernetes 1.7.1 https://github.com/kubevirt/kubevirt/pull/292
+- name: Workaround kubeadm 1.7.0 race condition, see https://github.com/kubernetes/kubeadm/issues/335
+  script: kubeadm-1-7-0-race-condition-workaround.sh
