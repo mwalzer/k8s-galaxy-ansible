@@ -28,11 +28,17 @@ spec:
             name: galaxy-pvc
 ### mutually exclusive to development_folder
 {{ if .Values.cluster_dev }}
-          #- mountPath: "/galaxy/config"
-          - mountPath: "/opt/galaxy_dev"
+          - mountPath: "/opt/galaxy_dev/config"
             name: galaxy-dev-config
+          #- mountPath: "/galaxy/config/galaxy.ini"
+          #  name: galaxy-ini
+          #- mountPath: "/galaxy/config/job_conf.xml"
+          #  name: galaxy-job-conf
+          #- mountPath: "/galaxy/config/tool_conf.xml"
+          #  name: galaxy-tool-conf
           #- mountPath: "/galaxy/tools/phenomenal"
-          #  name: phenomenal-tools
+          - mountPath: "/galaxy/tools"
+            name: galaxy-dev-tools
 {{ end }}
 ### also assumed is that both (galaxy-pvc and galaxy-dev) claims have been established beforehand and galaxy_create_pvc=false was used
 
@@ -54,6 +60,18 @@ spec:
         - name: galaxy-dev-config
           persistentVolumeClaim:
               claimName: {{.Values.galaxy_dev_config}}
+        #- name: galaxy-ini
+        #  persistentVolumeClaim:
+        #    claimName: {{ .Values.galaxy_dev_config }}/config/galaxy.ini
+        #- name: galaxy-job-conf
+        #  persistentVolumeClaim:
+        #    claimName: {{ .Values.galaxy_dev_config }}/config/job_conf.xml
+        #- name: galaxy-tool-conf
+        #  persistentVolumeClaim:
+        #    claimName: {{ .Values.galaxy_dev_config }}/config/tool_conf.xml
+        - name: galaxy-dev-tools
+          persistentVolumeClaim:
+              claimName: {{.Values.galaxy_dev_tools}}
 {{ end }}
 {{ if .Values.development_folder }}
         - name: galaxy-ini
