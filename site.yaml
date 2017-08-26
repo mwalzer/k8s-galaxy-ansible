@@ -41,7 +41,7 @@
     - bootstrap
   gather_facts: false
   roles:
-    - common
+#    - common
 
 - name: Install repo and packages
   hosts: all

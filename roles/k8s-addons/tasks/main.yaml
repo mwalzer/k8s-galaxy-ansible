@@ -62,23 +62,37 @@
   #https://stackoverflow.com/questions/43499971/helm-error-no-available-release-name-found
   ignore_errors: true
 
-# copy the development files for to k8s master (0644)
-#- copy:
+- name: Prepare custom k8s galaxy
+## copy the development files for to k8s master (0644)
+#  copy:
 #    src: /home/walzer/cloud-stuff/phnmnl-dev.tar.gz
 #    dest: /tmp/
 #    owner: centos
 #    group: centos
 #    mode: u=rw,g=r,o=r
+## put folder phnmnl-dev in /home/centos
+#  unarchive:
+#    src: /home/walzer/cloud-stuff/phnmnl-dev.tar.gz
+#    dest: /home/centos
+#    exclude:
+#    - /phnmnl-dev/kargo/
+  copy: 
+    src: dev/
+    dest: /home/centos/dev
+    owner: centos
+    group: centos
+    mode: u=rw,g=r,o=r
+  copy: 
+    src: myHelmChart/galaxy-simple
+    dest: /home/centos/k8s-galaxy-chart
+    owner: centos
+    group: centos
+    mode: u=rw,g=r,o=r
 
-- name: Prepare custom k8s galaxy
-  unarchive:
-    src: /home/walzer/cloud-stuff/phnmnl-dev.tar.gz
-    dest: /home/centos
-    exclude:
-    - /phnmnl-dev/kargo/
+# set up nsf4 server and make dev and data available as pvc's
 
 - name: deploy k8s galaxy
   command: "{{ item }}"
   with_items:
-  - helm install --set development_folder=/home/centos/phnmnl-dev galaxy-helm-repo/galaxy
+    - helm install --set development_folder=/home/centos/phnmnl-dev galaxy-helm-repo/galaxy
   ignore_errors: false 

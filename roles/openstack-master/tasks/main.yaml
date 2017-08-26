@@ -16,6 +16,7 @@
     nics:
       - net-name: "{{ lookup('env', 'NETWORK') | default(omit) }}"
     floating_ip_pools: "{{ lookup('env', 'FLOATING_IP_POOL') | default(omit, true) }}"
+    #timeout: 180
     userdata: |
       #cloud-config
       package_upgrade: true

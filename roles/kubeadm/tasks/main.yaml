@@ -1,6 +1,10 @@
-- name: SELinux - set permissive mode
-  command: setenforce 0
-  ignore_errors: yes
+#- name: SELinux - set permissive mode
+#  command: setenforce 0
+#  ignore_errors: yes
+
+- selinux:
+    policy: targeted
+    state: permissive
 
 #- name: Install k8s APT repo GPG key
 #  apt_key:
@@ -29,6 +33,7 @@
     - kubeadm
     - kubectl
     - kubernetes-cni
+    - nfs-utils
 
 - name: Start docker service
   systemd: 
@@ -42,11 +47,18 @@
     name: kubelet
     enabled: yes
 
+- name: Start nfs service
+  #hostname: "{{ name }}-master"
+  systemd:
+    state: started
+    name: nfs-server.service
+    enabled: yes
+
 - name: add hosts
   lineinfile:
     dest: "/etc/hosts"
     regexp: ".*{{ hostvars[item].ansible_hostname }}$"
-    line: "{{ hostvars[item].ansible_default_ipv4.address }} {{ hostvars[item].ansible_hostname }}"
+    line: "{{ hostvars[item].ansible_ssh_host }} {{ hostvars[item].ansible_hostname }}"
     state: present
   when: hostvars[item].ansible_hostname is defined
   with_items: "{{groups['all'] | default([])}}"
