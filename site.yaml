@@ -41,7 +41,7 @@
     - bootstrap
   gather_facts: false
   roles:
-#    - common
+    - common
 
 - name: Install repo and packages
   hosts: all
@@ -61,9 +61,10 @@
 
 - name: k8s nodes setup
   hosts: nodes
-  become: true
+  serial: 1
   tags:
     - bootstrap
+  become: true
   roles:
     - kubeadm-nodes
 

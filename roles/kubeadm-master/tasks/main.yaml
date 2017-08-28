@@ -75,5 +75,5 @@
   become_user: centos
 
 #obsolete with kubernetes 1.7.1 https://github.com/kubevirt/kubevirt/pull/292
-#- name: Workaround kubeadm 1.7.0 race condition, see https://github.com/kubernetes/kubeadm/issues/335
-#  script: kubeadm-1-7-0-race-condition-workaround.sh
+- name: Workaround kubeadm 1.7.0 race condition, see https://github.com/kubernetes/kubeadm/issues/335
+  script: kubeadm-1-7-0-race-condition-workaround.sh

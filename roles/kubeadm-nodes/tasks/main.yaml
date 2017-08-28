@@ -1,6 +1,11 @@
-- name: Install a pod network
-  command: sh -c 'printenv'
-  
+- name: show host
+  debug:
+    msg: "{{ ansible_host }}"
+ 
+- name: show token
+  debug:
+    msg: "{{ hostvars[groups.master[0]]['token'].stdout }}"
+
 - name: kubeadm join
   command: "kubeadm join --skip-preflight-checks --token {{ hostvars[groups.master[0]]['token'].stdout }} {{ hostvars[groups.master[0]]['ansible_default_ipv4']['address'] }}:6443"
   args:
