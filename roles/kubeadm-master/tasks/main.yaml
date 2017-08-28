@@ -70,7 +70,7 @@
   register: kubever
 
 - name: Install a pod network
-  command: sh -c 'printenv && kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version={{ kubever.stdout }}"'  
+  command: sh -c 'kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version={{ kubever.stdout }}"'  
   become: yes
   become_user: centos
 

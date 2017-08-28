@@ -86,3 +86,12 @@
     mode: 0600
   notify:
     - restart kubelet
+
+- name: Update kubernetes packages
+  yum:
+    name: "*"
+    state: latest
+    update_cache: yes
+  notify:
+    - restart kubelet
+
