@@ -1,25 +1,32 @@
+#- hostname: 
+#    name: "{{ name }}-master"
+
 - name: Check for existing kubelet configuration
   stat:
     path: /etc/kubernetes/kubelet.conf
   register: kubelet_conf
 
+- name: Recover from failed attempts
+  command: kubeadm reset
+  when: kubelet_conf.stat.exists == True 
+
 - name: kubeadm token generate
   command: kubeadm token generate
-  register: token1
-  when: kubelet_conf.stat.exists == False
+  register: token
 
-- name: kubeadm get existing token
-  command: sh -c "kubeadm token list | awk '/The default bootstrap token/ { print $1; }'"
-  register: token2
-  when: kubelet_conf.stat.exists == True
+#- name: kubeadm get existing token
+#  command: sh -c "kubeadm token list | awk '/The default bootstrap token/ { print $1; }'"
+#  register: token2
+#  when: kubelet_conf.stat.exists == True
 
 # https://github.com/ansible/ansible/issues/4297
-- name: token
-  set_fact:
-    token: "{{ token1 if kubelet_conf.stat.exists == False else token2 }}"
+#- name: token
+#  set_fact:
+#    token: "{{ token1 if kubelet_conf.stat.exists == False else token2 }}"
 
 - name: kubeadm init
   command: "kubeadm init --skip-preflight-checks --token {{ token.stdout }} --kubernetes-version v1.7.0 --apiserver-advertise-address {{ hostvars[groups.master[0]].ansible_ssh_host }}"
+  #command: "kubeadm init --skip-preflight-checks --token {{ token.stdout }}"
   args:
     creates: /etc/kubernetes/kubelet.conf
 
@@ -57,6 +64,15 @@
   become: True
   shell: kubectl completion bash > /etc/bash_completion.d/kubectl
   when: kubectl_bash_completion.stat.exists == False
+
+- name: Register the kubectl version
+  command: sh -c "kubectl version | base64 | tr -d '\n'"
+  register: kubever
+
+- name: Install a pod network
+  command: sh -c 'printenv && kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version={{ kubever.stdout }}"'  
+  become: yes
+  become_user: centos
 
 #obsolete with kubernetes 1.7.1 https://github.com/kubevirt/kubevirt/pull/292
 #- name: Workaround kubeadm 1.7.0 race condition, see https://github.com/kubernetes/kubeadm/issues/335
